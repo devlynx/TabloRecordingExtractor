@@ -1,0 +1,25 @@
+﻿<Window x:Class="TabloRecordingExtractor.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MainWindow" Height="537.9" Width="824">
+    <Grid>
+        <GroupBox Header="Recordings Found" HorizontalAlignment="Left" Height="354" Margin="10,10,0,0" VerticalAlignment="Top" Width="301">
+            <ListView x:Name="lvRecordingsFound" Margin="5,5,5,5" SelectionMode="Single">
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="Description" Width="200" DisplayMemberBinding="{Binding Description}" />
+                        <GridViewColumn Header="Air Date" Width="50" DisplayMemberBinding="{Binding RecordedOnDate}" />
+                    </GridView>
+                </ListView.View>
+            </ListView>
+        </GroupBox>
+        <GroupBox Header="Recordings to Extract" HorizontalAlignment="Left" Height="354" Margin="396,10,0,0" VerticalAlignment="Top" Width="301">
+            <ListBox x:Name="lbRecordingsToExtract" Margin="10,10,10,10" SelectionMode="Single" />
+        </GroupBox>
+        <Button Content="Find Recordings" HorizontalAlignment="Left" Margin="211,369,0,0" VerticalAlignment="Top" Width="100" Name="FindRecordings" Click="FindRecordings_Click"/>
+        <Button Content="Add &gt;&gt;" HorizontalAlignment="Left" Margin="316,67,0,0" VerticalAlignment="Top" Width="75" Name="AddItem" Click="AddItem_Click"/>
+        <Button Content="&lt;&lt; Remove" HorizontalAlignment="Left" Margin="316,94,0,0" VerticalAlignment="Top" Width="75" Name="RemoveItem" Click="RemoveItem_Click"/>
+        <Button Content="Extract" HorizontalAlignment="Left" Margin="622,369,0,0" VerticalAlignment="Top" Width="75" Name="Extract" Click="Extract_Click"/>
+        <TextBox HorizontalAlignment="Left" Height="25" Margin="20,406,0,0" TextWrapping="Wrap" Text="C:\Temp" VerticalAlignment="Top" Width="212" Name="OutputDirectory" MouseDoubleClick="OutputDirectory_MouseDoubleClick"/>
+    </Grid>
+</Window>
