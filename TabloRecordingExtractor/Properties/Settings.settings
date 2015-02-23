@@ -8,5 +8,8 @@
     <Setting Name="OutputDirectory" Type="System.String" Scope="User">
       <Value Profile="(Default)">C:\Temp</Value>
     </Setting>
+    <Setting Name="FFMPEGLocation" Type="System.String" Scope="User">
+      <Value Profile="(Default)">C:\Temp\ffmpeg\bin\ffmpeg.exe</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

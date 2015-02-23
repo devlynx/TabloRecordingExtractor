@@ -46,5 +46,17 @@ namespace TabloRecordingExtractor.Properties {
                 this["OutputDirectory"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("C:\\Temp\\ffmpeg\\bin\\ffmpeg.exe")]
+        public string FFMPEGLocation {
+            get {
+                return ((string)(this["FFMPEGLocation"]));
+            }
+            set {
+                this["FFMPEGLocation"] = value;
+            }
+        }
     }
 }

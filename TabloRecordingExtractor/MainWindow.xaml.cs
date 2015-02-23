@@ -29,7 +29,7 @@ namespace TabloRecordingExtractor
             Properties.Settings.Default.Save();
             base.OnClosing(e);
         }
-        
+
         private void btnFindRecordings_Click(object sender, RoutedEventArgs e)
         {
             string tabloIPAddress = txtTabloIPAddress.Text;
@@ -140,6 +140,7 @@ namespace TabloRecordingExtractor
         private void GetRecordingVideo(string IPAddress, Recording recording)
         {
             string outputDirectory = OutputDirectory.Text;
+            string FFMPEGLocation = txtFFMPEGLocation.Text;
 
             try
             {
@@ -151,6 +152,7 @@ namespace TabloRecordingExtractor
             catch (IOException ex)
             {
                 MessageBox.Show("Unable to create temporary directory at '" + Path.GetTempPath() + "\\TempTabloExtract'");
+                return;
             }
 
             try
@@ -163,6 +165,27 @@ namespace TabloRecordingExtractor
             catch (IOException ex)
             {
                 MessageBox.Show("Unable to create output directory at '" + outputDirectory + "'");
+                return;
+            }
+
+            if (!File.Exists(FFMPEGLocation))
+            {
+                MessageBox.Show("FFMPEG could not be found. It must be located before you can proceed.");
+                return;
+            }
+            try
+            {
+                FileInfo fileInfo = new FileInfo(FFMPEGLocation);
+                if (fileInfo.Name != "ffmpeg.exe")
+                {
+                    MessageBox.Show("The file name provided for FFMPEG was not \"ffpmeg.exe\". It must be located before you can proceed.");
+                    return;
+                }
+            }
+            catch
+            {
+                MessageBox.Show("There was a problem reading from the FFMPEG exe. It must be located before you can proceed.");
+                return;
             }
 
             string webPageText;
@@ -202,7 +225,7 @@ namespace TabloRecordingExtractor
 
                 progress.Report(String.Format("Processing in FFMPEG to create '{0}'...", OutputFile));
 
-                ProcessVideosInFFMPEG(outputFileNames, OutputFile);
+                ProcessVideosInFFMPEG(outputFileNames, OutputFile, FFMPEGLocation);
 
                 progress.Report("Deleting TS files...");
 
@@ -223,13 +246,13 @@ namespace TabloRecordingExtractor
             });
         }
 
-        private void ProcessVideosInFFMPEG(List<string> tsFileNames, string OutputFile)
+        private void ProcessVideosInFFMPEG(List<string> tsFileNames, string OutputFile, string FFMPEGLocation)
         {
             string fileNamesConcatString = String.Join("|", tsFileNames.Select(x => x.ToString()).ToArray());
 
             using (Process proc = new Process())
             {
-                proc.StartInfo.FileName = "C:\\Temp\\ffmpeg\\bin\\ffmpeg.exe";
+                proc.StartInfo.FileName = FFMPEGLocation;
                 proc.StartInfo.Arguments = String.Format("-y -i \"concat:{0}\" -bsf:a aac_adtstoasc -c copy \"{1}\"", fileNamesConcatString, OutputFile);
                 proc.StartInfo.RedirectStandardError = true;
                 proc.StartInfo.UseShellExecute = false;
@@ -355,6 +378,26 @@ namespace TabloRecordingExtractor
             System.Windows.Forms.DialogResult result = dialog.ShowDialog();
             OutputDirectory.Text = dialog.SelectedPath;
         }
+
+        private void txtFFMPEGLocation_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            ShowFFMPEGFindDialog();
+        }
+
+        private void btnLocateFFMPEG_Click(object sender, RoutedEventArgs e)
+        {
+            ShowFFMPEGFindDialog();
+        }
+
+        private void ShowFFMPEGFindDialog()
+        {
+            var dialog = new System.Windows.Forms.OpenFileDialog();
+            dialog.Filter = "FFMPEG Application|ffmpeg.exe";
+            System.Windows.Forms.DialogResult result = dialog.ShowDialog();
+            txtFFMPEGLocation.Text = dialog.FileName;
+        }
+
+
     }
 
     public enum RecordingType { Episode, Movie };
