@@ -33,12 +33,14 @@ namespace TabloRecordingExtractor
         private void btnFindRecordings_Click(object sender, RoutedEventArgs e)
         {
             string tabloIPAddress = txtTabloIPAddress.Text;
-            List<int> foundRecordings = GetRecordingList(tabloIPAddress);
             List<Recording> recordings = new List<Recording>();
 
             DoWorkWithModal(progress =>
             {
-                progress.Report(String.Format("Finding recordings on Tablo at IP {0}", tabloIPAddress));
+                progress.Report(String.Format("Finding recordings on Tablo at IP {0}...", tabloIPAddress));
+                List<int> foundRecordings = GetRecordingList(tabloIPAddress);
+
+                progress.Report("Loading metadata for recordings found...");
                 foreach (var foundRecording in foundRecordings)
                 {
                     RecordingMetadata metadata = GetRecordingMetadata(tabloIPAddress, foundRecording);
