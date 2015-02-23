@@ -1,7 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -20,87 +19,79 @@ namespace TabloRecordingExtractor
     /// </summary>
     public partial class MainWindow : Window
     {
-        string tabloIPAddress = "192.168.1.184";
-        bool showMovies = false;
-        bool showTV = true;
-
         public MainWindow()
         {
             InitializeComponent();
         }
 
-        private void FindRecordings_Click(object sender, RoutedEventArgs e)
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
+            Properties.Settings.Default.Save();
+            base.OnClosing(e);
+        }
+        
+        private void btnFindRecordings_Click(object sender, RoutedEventArgs e)
+        {
+            string tabloIPAddress = txtTabloIPAddress.Text;
             List<int> foundRecordings = GetRecordingList(tabloIPAddress);
             List<Recording> recordings = new List<Recording>();
 
-            foreach (var foundRecording in foundRecordings)
+            DoWorkWithModal(progress =>
             {
-                RecordingMetadata metadata = GetRecordingMetadata(tabloIPAddress, foundRecording);
-                if(metadata != null)
+                progress.Report(String.Format("Finding recordings on Tablo at IP {0}", tabloIPAddress));
+                foreach (var foundRecording in foundRecordings)
                 {
-                    /*
-                    ListBoxItem newItem = new ListBoxItem();
-                    newItem.Tag = foundRecording;
-                    if(metadata.recEpisode != null)
+                    RecordingMetadata metadata = GetRecordingMetadata(tabloIPAddress, foundRecording);
+                    if (metadata != null)
                     {
-                        newItem.Content = String.Format("{0} - S{1}E{2} - {3} ({4}).mp4", metadata.recSeries.jsonForClient.title, metadata.recEpisode.jsonForClient.seasonNumber.ToString("00"), metadata.recEpisode.jsonForClient.episodeNumber.ToString("00"), metadata.recEpisode.jsonForClient.title, metadata.recEpisode.jsonForClient.airDate);
-                        lbRecordingsFound.Items.Add(newItem);
-                    }
-                    else if (metadata.recMovie != null)
-                    {
-                        newItem.Content = String.Format("{0} ({1}).mp4", metadata.recMovie.jsonForClient.title, metadata.recMovie.jsonForClient.releaseYear);
-                        lbRecordingsFound.Items.Add(newItem);
-                    }
-                    */
+                        Recording recording = new Recording();
+                        recording.Id = foundRecording;
+                        if (metadata.recEpisode != null)
+                        {
+                            recording.Type = RecordingType.Episode;
+                            recording.Description = String.Format("{0} - S{1}E{2} - {3}", metadata.recSeries.jsonForClient.title, metadata.recEpisode.jsonForClient.seasonNumber.ToString("00"), metadata.recEpisode.jsonForClient.episodeNumber.ToString("00"), metadata.recEpisode.jsonForClient.title);
+                            recording.RecordedOnDate = DateTime.Parse(metadata.recEpisode.jsonForClient.airDate);
+                        }
+                        else if (metadata.recMovie != null)
+                        {
+                            recording.Type = RecordingType.Movie;
+                            recording.Description = String.Format("{0} ({1})", metadata.recMovie.jsonForClient.title, metadata.recMovie.jsonForClient.releaseYear);
+                            recording.RecordedOnDate = DateTime.Parse(metadata.recMovieAiring.jsonForClient.airDate);
+                        }
+                        recordings.Add(recording);
 
-                    Recording recording = new Recording();
-                    recording.Id = foundRecording;
-                    if (metadata.recEpisode != null)
-                    {
-                        recording.Description = String.Format("{0} - S{1}E{2} - {3}", metadata.recSeries.jsonForClient.title, metadata.recEpisode.jsonForClient.seasonNumber.ToString("00"), metadata.recEpisode.jsonForClient.episodeNumber.ToString("00"), metadata.recEpisode.jsonForClient.title);
-                        recording.RecordedOnDate = DateTime.Parse(metadata.recEpisode.jsonForClient.airDate);
+                        if ((recordings.Count % 20) == 0)
+                        {
+                            progress.Report(String.Format("{0} recordings found...", recordings.Count));
+                        }
                     }
-                    else if (metadata.recMovie != null)
-                    {
-                        recording.Description = String.Format("{0} ({1})", metadata.recMovie.jsonForClient.title, metadata.recMovie.jsonForClient.releaseYear);
-                        recording.RecordedOnDate = DateTime.Parse(metadata.recMovieAiring.jsonForClient.airDate);
-                    }
-                    recordings.Add(recording);
                 }
-            }
-            lvRecordingsFound.ItemsSource = recordings;
+            });
 
+            lvRecordingsFound.ItemsSource = recordings;
             CollectionView view = (CollectionView)CollectionViewSource.GetDefaultView(lvRecordingsFound.ItemsSource);
             view.SortDescriptions.Add(new SortDescription("Description", ListSortDirection.Ascending));
         }
 
-        private void Extract_Click(object sender, RoutedEventArgs e)
+        private void btnExtract_Click(object sender, RoutedEventArgs e)
         {
-            //// Instantiate the dialog box
-            //StatusDialogWindow dlg = new StatusDialogWindow();
+            string tabloIPAddress = txtTabloIPAddress.Text;
 
-            //// Configure the dialog box
-            //dlg.Owner = this;
-            ////dlg.
-
-            //// Open the dialog box modally 
-            //dlg.ShowDialog();
-
-            foreach (ListBoxItem itemToExtract in lbRecordingsToExtract.Items)
+            List<Recording> selectedRecordings = new List<Recording>();
+            foreach (var item in lvRecordingsFound.SelectedItems)
             {
-                int recordingID = (int)itemToExtract.Tag;
-                RecordingMetadata metadata = GetRecordingMetadata(tabloIPAddress, recordingID);
-                string OutputFile = String.Format("{0}\\{1} - S{2}E{3} - {4}.mp4", OutputDirectory.Text, CleanFileName(metadata.recSeries.jsonForClient.title), metadata.recEpisode.jsonForClient.seasonNumber.ToString("00"), metadata.recEpisode.jsonForClient.episodeNumber.ToString("00"), CleanFileName(metadata.recEpisode.jsonForClient.title));
-                GetRecordingVideo(tabloIPAddress, recordingID, OutputFile);
+                Recording recording = item as Recording;
+                selectedRecordings.Add(recording);
             }
-        }
 
-        private void OutputDirectory_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-        {
-            var dialog = new System.Windows.Forms.FolderBrowserDialog();
-            System.Windows.Forms.DialogResult result = dialog.ShowDialog();
-            OutputDirectory.Text = dialog.SelectedPath;
+            foreach (var recording in selectedRecordings)
+            {
+                if (recording != null)
+                {
+                    GetRecordingVideo(tabloIPAddress, recording);
+                }
+
+            }
         }
 
         private List<int> GetRecordingList(string IPAddress)
@@ -132,7 +123,7 @@ namespace TabloRecordingExtractor
             string metadata;
             using (WebClient client = new WebClient())
             {
-                try 
+                try
                 {
                     metadata = client.DownloadString("http://" + IPAddress + ":18080/pvr/" + RecordingID.ToString() + "/meta.txt");
                 }
@@ -144,17 +135,38 @@ namespace TabloRecordingExtractor
             return JsonConvert.DeserializeObject<RecordingMetadata>(metadata);
         }
 
-        private void GetRecordingVideo(string IPAddress, int RecordingID, string OutputFile)
+        private void GetRecordingVideo(string IPAddress, Recording recording)
         {
-            if (!Directory.Exists(Path.GetTempPath() + "\\TempTabloExtract"))
+            string outputDirectory = OutputDirectory.Text;
+
+            try
             {
-                Directory.CreateDirectory(Path.GetTempPath() + "\\TempTabloExtract");
+                if (!Directory.Exists(Path.GetTempPath() + "\\TempTabloExtract"))
+                {
+                    Directory.CreateDirectory(Path.GetTempPath() + "\\TempTabloExtract");
+                }
+            }
+            catch (IOException ex)
+            {
+                MessageBox.Show("Unable to create temporary directory at '" + Path.GetTempPath() + "\\TempTabloExtract'");
+            }
+
+            try
+            {
+                if (!Directory.Exists(outputDirectory))
+                {
+                    Directory.CreateDirectory(outputDirectory);
+                }
+            }
+            catch (IOException ex)
+            {
+                MessageBox.Show("Unable to create output directory at '" + outputDirectory + "'");
             }
 
             string webPageText;
             using (WebClient client = new WebClient())
             {
-                webPageText = client.DownloadString("http://" + IPAddress + ":18080/pvr/" + RecordingID.ToString() + "/segs/");
+                webPageText = client.DownloadString("http://" + IPAddress + ":18080/pvr/" + recording.Id.ToString() + "/segs/");
             }
 
             List<string> tsFileNames = new List<string>();
@@ -168,43 +180,53 @@ namespace TabloRecordingExtractor
             }
 
             List<string> outputFileNames = new List<string>();
-            foreach (var tsFileName in tsFileNames)
+
+            DoWorkWithModal(progress =>
             {
-                using (WebClient Client = new WebClient())
+                progress.Report(String.Format("Extracting Tablo recording TS files for '{0}'...", recording.Description));
+                foreach (var tsFileName in tsFileNames)
                 {
-                    string downloadURL = String.Format("http://{0}:18080/pvr/{1}/segs/{2}", IPAddress, RecordingID.ToString(), tsFileName);
-                    string outputFileName = String.Format("{0}\\TempTabloExtract\\{1}-{2}", Path.GetTempPath(), RecordingID.ToString(), tsFileName);
+                    progress.Report(String.Format("  Downloading '{0}'...", tsFileName));
+                    using (WebClient Client = new WebClient())
+                    {
+                        string downloadURL = String.Format("http://{0}:18080/pvr/{1}/segs/{2}", IPAddress, recording.Id.ToString(), tsFileName);
+                        string outputFileName = String.Format("{0}\\TempTabloExtract\\{1}-{2}", Path.GetTempPath(), recording.Id.ToString(), tsFileName);
 
-                    Client.DownloadFile(downloadURL, outputFileName);
-                    outputFileNames.Add(outputFileName);
+                        Client.DownloadFile(downloadURL, outputFileName);
+                        outputFileNames.Add(outputFileName);
+                    }
                 }
-            }
+                string OutputFile = String.Format("{0}\\{1}.mp4", outputDirectory, recording.Description);
 
-            ProcessVideosInFFMPEG(outputFileNames, OutputFile);
+                progress.Report(String.Format("Processing in FFMPEG to create '{0}'...", OutputFile));
 
-            foreach (var outputFileName in outputFileNames)
-            {
-                if (File.Exists(outputFileName))
+                ProcessVideosInFFMPEG(outputFileNames, OutputFile);
+
+                progress.Report("Deleting TS files...");
+
+                foreach (var outputFileName in outputFileNames)
                 {
-                    File.Delete(outputFileName);
+                    if (File.Exists(outputFileName))
+                    {
+                        File.Delete(outputFileName);
+                    }
                 }
-            }
 
-            ProcessVideoInHandbrake(OutputFile, OutputFile.Replace(".mp4", ".mkv"));
+                //ProcessVideoInHandbrake(OutputFile, OutputFile.Replace(".mp4", ".mkv"));
 
-            if (File.Exists(OutputFile))
-            {
-                File.Delete(OutputFile);
-            }
-
+                //if (File.Exists(OutputFile))
+                //{
+                //    File.Delete(OutputFile);
+                //}
+            });
         }
 
         private void ProcessVideosInFFMPEG(List<string> tsFileNames, string OutputFile)
         {
             string fileNamesConcatString = String.Join("|", tsFileNames.Select(x => x.ToString()).ToArray());
-            
-            using(Process proc = new Process())
-            { 
+
+            using (Process proc = new Process())
+            {
                 proc.StartInfo.FileName = "C:\\Temp\\ffmpeg\\bin\\ffmpeg.exe";
                 proc.StartInfo.Arguments = String.Format("-y -i \"concat:{0}\" -bsf:a aac_adtstoasc -c copy \"{1}\"", fileNamesConcatString, OutputFile);
                 proc.StartInfo.RedirectStandardError = true;
@@ -227,8 +249,8 @@ namespace TabloRecordingExtractor
 
         private void ProcessVideoInHandbrake(string InputMP4File, string OutputMKVFile)
         {
-            using(Process proc = new Process())
-            { 
+            using (Process proc = new Process())
+            {
                 proc.StartInfo.FileName = "C:\\Program Files\\Handbrake\\HandBrakeCLI.exe";
                 proc.StartInfo.Arguments = String.Format("-i \"{0}\" -f -a 1 -E copy -f mkv -O -e x264 -q 22.0 --loose-anamorphic --modulus 2 -m --x264-preset medium --h264-profile high --h264-level 4.1 --decomb --denoise=weak -v -o \"{1}\"", InputMP4File, OutputMKVFile);
                 proc.StartInfo.RedirectStandardError = true;
@@ -254,56 +276,90 @@ namespace TabloRecordingExtractor
             return System.IO.Path.GetInvalidFileNameChars().Aggregate(fileName, (current, c) => current.Replace(c.ToString(), string.Empty));
         }
 
-        private void AddItem_Click(object sender, RoutedEventArgs e)
+        private void btnValidateTablo_Click(object sender, RoutedEventArgs e)
         {
-            //ListBoxItem itemToMove = (ListBoxItem)lbRecordingsFound.SelectedItem;
-            //ListBoxItem newItem = new ListBoxItem();
-            //newItem.Tag = itemToMove.Tag;
-            //newItem.Content = itemToMove.Content;
-            //lbRecordingsToExtract.Items.Add(newItem);
-            //lbRecordingsFound.Items.RemoveAt(lbRecordingsFound.SelectedIndex);
-            List<Recording> recordings = new List<Recording>();
-            
+            IPAddress tabloIPaddress;
 
-            foreach (var selectedItem in lvRecordingsFound.SelectedItems)
+            if (IPAddress.TryParse(txtTabloIPAddress.Text, out tabloIPaddress))
             {
-                Recording recording = selectedItem as Recording;
-
+                try
+                {
+                    using (WebClient client = new WebClient())
+                    {
+                        string webPageText = client.DownloadString("http://" + txtTabloIPAddress.Text + ":18080");
+                    }
+                    txtTabloIPAddress.IsEnabled = false;
+                    btnValidateTablo.IsEnabled = false;
+                    btnFindRecordings.IsEnabled = true;
+                }
+                catch (System.Net.WebException ex)
+                {
+                    MessageBox.Show("Tablo data not found at the IP Address entered. Please try again.");
+                }
             }
-            /*
-                    recording.Id = foundRecording;
-                    if (metadata.recEpisode != null)
-                    {
-                        recording.Description = String.Format("{0} - S{1}E{2} - {3}", metadata.recSeries.jsonForClient.title, metadata.recEpisode.jsonForClient.seasonNumber.ToString("00"), metadata.recEpisode.jsonForClient.episodeNumber.ToString("00"), metadata.recEpisode.jsonForClient.title);
-                        recording.RecordedOnDate = DateTime.Parse(metadata.recEpisode.jsonForClient.airDate);
-                    }
-                    else if (metadata.recMovie != null)
-                    {
-                        recording.Description = String.Format("{0} ({1})", metadata.recMovie.jsonForClient.title, metadata.recMovie.jsonForClient.releaseYear);
-                        recording.RecordedOnDate = DateTime.Parse(metadata.recMovieAiring.jsonForClient.airDate);
-                    }
-                    recordings.Add(recording);
-             * */
-            lvRecordingsFound.ItemsSource = recordings;
-
-            CollectionView view = (CollectionView)CollectionViewSource.GetDefaultView(lvRecordingsFound.ItemsSource);
-            view.SortDescriptions.Add(new SortDescription("Description", ListSortDirection.Ascending));
+            else
+            {
+                MessageBox.Show("The text entered is not a valid IP address. Please try again.");
+            }
         }
 
-        private void RemoveItem_Click(object sender, RoutedEventArgs e)
+        private void lvRecordingsFound_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            //ListBoxItem itemToMove = (ListBoxItem)lbRecordingsToExtract.SelectedItem;
-            //ListBoxItem newItem = new ListBoxItem();
-            //newItem.Tag = itemToMove.Tag;
-            //newItem.Content = itemToMove.Content;
-            //lbRecordingsFound.Items.Add(newItem);
-            //lbRecordingsToExtract.Items.RemoveAt(lbRecordingsToExtract.SelectedIndex);
+            if (lvRecordingsFound.SelectedItems.Count > 0)
+            {
+                btnExtract.IsEnabled = true;
+            }
+            else
+            {
+                btnExtract.IsEnabled = false;
+            }
+        }
 
+        public static void DoWorkWithModal(Action<IProgress<string>> work)
+        {
+            StatusDialogWindow statusWindow = new StatusDialogWindow();
+
+            statusWindow.Loaded += (_, args) =>
+            {
+                BackgroundWorker worker = new BackgroundWorker();
+
+                Progress<string> progress = new Progress<string>(
+                    data => statusWindow.AddStatusText(data));
+
+                worker.DoWork += (s, workerArgs) => work(progress);
+
+                worker.RunWorkerCompleted +=
+                    (s, workerArgs) => statusWindow.Close();
+
+                worker.RunWorkerAsync();
+            };
+
+            statusWindow.ShowDialog();
+        }
+
+        private void btnBrowse_Click(object sender, RoutedEventArgs e)
+        {
+            ShowOutputFolderSelectDialog();
+        }
+
+        private void OutputDirectory_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            ShowOutputFolderSelectDialog();
+        }
+
+        private void ShowOutputFolderSelectDialog()
+        {
+            var dialog = new System.Windows.Forms.FolderBrowserDialog();
+            System.Windows.Forms.DialogResult result = dialog.ShowDialog();
+            OutputDirectory.Text = dialog.SelectedPath;
         }
     }
 
+    public enum RecordingType { Episode, Movie };
+
     public class Recording
     {
+        public RecordingType Type { get; set; }
         public int Id { get; set; }
         public string Description { get; set; }
         public DateTime RecordedOnDate { get; set; }

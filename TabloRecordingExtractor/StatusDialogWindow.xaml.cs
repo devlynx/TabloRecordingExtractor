@@ -24,9 +24,10 @@ namespace TabloRecordingExtractor
             InitializeComponent();
         }
 
-        public string StatusText
+        public void AddStatusText(string StatusText)
         {
-            set { tbStatus.Text = value; }
+            tbStatus.Text += StatusText + "\n";
+            svStatus.ScrollToBottom();
         }
     }
 }
