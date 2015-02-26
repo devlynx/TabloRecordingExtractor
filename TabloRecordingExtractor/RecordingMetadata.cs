@@ -8,6 +8,7 @@ namespace TabloRecordingExtractor
         public int recSeries { get; set; }
         public int recMovie { get; set; }
         public int recChannel { get; set; }
+        public int recManualProgram { get; set; }
     }
 
     public class Video
@@ -124,6 +125,12 @@ namespace TabloRecordingExtractor
         public JsonForClient jsonForClient { get; set; }
         public ImageJson imageJson { get; set; }
         public JsonFromTribune jsonFromTribune { get; set; }
+    }
+
+    public class RecManualProgramAiring
+    {
+        public JsonForClient jsonForClient { get; set; }
+        public ImageJson imageJson { get; set; }
     }
     
     public class Award
@@ -328,6 +335,11 @@ namespace TabloRecordingExtractor
         public JsonFromTribune2 jsonFromTribune { get; set; }
         public List<ImageJsonFromTribune> imageJsonFromTribune { get; set; }
     }
+    
+    public class RecManualProgram
+    {
+        public JsonForClient2 jsonForClient { get; set; }
+    }
 
     public class RecordingMetadata
     {
@@ -336,5 +348,7 @@ namespace TabloRecordingExtractor
         public RecSeason recSeason { get; set; }
         public RecMovieAiring recMovieAiring { get; set; }
         public RecMovie recMovie { get; set; }
+        public RecManualProgramAiring recManualProgramAiring { get; set; }
+        public RecManualProgram recManualProgram { get; set; }
     }
 }

@@ -19,6 +19,9 @@ namespace TabloRecordingExtractor
     /// </summary>
     public partial class MainWindow : Window
     {
+        private GridViewColumnHeader listViewSortCol = null;
+        private SortAdorner listViewSortAdorner = null;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -59,6 +62,16 @@ namespace TabloRecordingExtractor
                             recording.Type = RecordingType.Movie;
                             recording.Description = String.Format("{0} ({1})", metadata.recMovie.jsonForClient.title, metadata.recMovie.jsonForClient.releaseYear);
                             recording.RecordedOnDate = DateTime.Parse(metadata.recMovieAiring.jsonForClient.airDate);
+                        }
+                        else if (metadata.recManualProgram != null)
+                        {
+                            recording.Type = RecordingType.Manual;
+                            recording.Description = String.Format("{0}", metadata.recManualProgram.jsonForClient.title);
+                            recording.RecordedOnDate = DateTime.Parse(metadata.recManualProgramAiring.jsonForClient.airDate);
+                        }
+                        else
+                        {
+                            //throw new Exception("Test");
                         }
                         recordings.Add(recording);
 
@@ -397,16 +410,24 @@ namespace TabloRecordingExtractor
             txtFFMPEGLocation.Text = dialog.FileName;
         }
 
+        private void lvRecordingsFound_Click(object sender, RoutedEventArgs e)
+        {
+            GridViewColumnHeader column = (sender as GridViewColumnHeader);
+            string sortBy = column.Tag.ToString();
+            if (listViewSortCol != null)
+            {
+                AdornerLayer.GetAdornerLayer(listViewSortCol).Remove(listViewSortAdorner);
+                lvRecordingsFound.Items.SortDescriptions.Clear();
+            }
 
-    }
+            ListSortDirection newDir = ListSortDirection.Ascending;
+            if (listViewSortCol == column && listViewSortAdorner.Direction == newDir)
+                newDir = ListSortDirection.Descending;
 
-    public enum RecordingType { Episode, Movie };
-
-    public class Recording
-    {
-        public RecordingType Type { get; set; }
-        public int Id { get; set; }
-        public string Description { get; set; }
-        public DateTime RecordedOnDate { get; set; }
+            listViewSortCol = column;
+            listViewSortAdorner = new SortAdorner(listViewSortCol, newDir);
+            AdornerLayer.GetAdornerLayer(listViewSortCol).Add(listViewSortAdorner);
+            lvRecordingsFound.Items.SortDescriptions.Add(new SortDescription(sortBy, newDir));
+        }
     }
 }

@@ -73,6 +73,8 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Recording.cs" />
+    <Compile Include="SortAdorner.cs" />
     <Compile Include="StatusDialogWindow.xaml.cs">
       <DependentUpon>StatusDialogWindow.xaml</DependentUpon>
     </Compile>
