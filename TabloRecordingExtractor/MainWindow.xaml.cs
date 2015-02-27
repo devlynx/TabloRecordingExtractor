@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -21,6 +22,7 @@ namespace TabloRecordingExtractor
     {
         private GridViewColumnHeader listViewSortCol = null;
         private SortAdorner listViewSortAdorner = null;
+        private ObservableCollection<Recording> recordings = null;
 
         public MainWindow()
         {
@@ -36,7 +38,7 @@ namespace TabloRecordingExtractor
         private void btnFindRecordings_Click(object sender, RoutedEventArgs e)
         {
             string tabloIPAddress = txtTabloIPAddress.Text;
-            List<Recording> recordings = new List<Recording>();
+            recordings = new ObservableCollection<Recording>();
 
             DoWorkWithModal(progress =>
             {
@@ -56,23 +58,42 @@ namespace TabloRecordingExtractor
                             recording.Type = RecordingType.Episode;
                             recording.Description = String.Format("{0} - S{1}E{2} - {3}", metadata.recSeries.jsonForClient.title, metadata.recEpisode.jsonForClient.seasonNumber.ToString("00"), metadata.recEpisode.jsonForClient.episodeNumber.ToString("00"), metadata.recEpisode.jsonForClient.title);
                             recording.RecordedOnDate = DateTime.Parse(metadata.recEpisode.jsonForClient.airDate);
+
+                            if (metadata.recEpisode.jsonForClient.video.state.ToLower() != "finished")
+                                recording.IsNotFinished = true;
                         }
                         else if (metadata.recMovie != null)
                         {
                             recording.Type = RecordingType.Movie;
                             recording.Description = String.Format("{0} ({1})", metadata.recMovie.jsonForClient.title, metadata.recMovie.jsonForClient.releaseYear);
                             recording.RecordedOnDate = DateTime.Parse(metadata.recMovieAiring.jsonForClient.airDate);
+
+                            if (metadata.recMovieAiring.jsonForClient.video.state.ToLower() != "finished")
+                                recording.IsNotFinished = true;
+                        }
+                        else if (metadata.recSportEvent != null)
+                        {
+                            recording.Type = RecordingType.Manual;
+                            recording.Description = String.Format("{0} - {1}", metadata.recSportOrganization.jsonForClient.title, metadata.recSportEvent.jsonForClient.eventTitle);
+                            recording.RecordedOnDate = DateTime.Parse(metadata.recSportEvent.jsonForClient.airDate);
+
+                            if (metadata.recSportEvent.jsonForClient.video.state.ToLower() != "finished")
+                                recording.IsNotFinished = true;
                         }
                         else if (metadata.recManualProgram != null)
                         {
                             recording.Type = RecordingType.Manual;
                             recording.Description = String.Format("{0}", metadata.recManualProgram.jsonForClient.title);
                             recording.RecordedOnDate = DateTime.Parse(metadata.recManualProgramAiring.jsonForClient.airDate);
+
+                            if (metadata.recManualProgramAiring.jsonForClient.video.state.ToLower() != "finished")
+                                recording.IsNotFinished = true;
                         }
-                        else
+                        else //If this is not a recognized recording type
                         {
-                            //throw new Exception("Test");
+                            continue; // Skip the remainder of this iteration.
                         }
+
                         recordings.Add(recording);
 
                         if ((recordings.Count % 20) == 0)
@@ -428,6 +449,8 @@ namespace TabloRecordingExtractor
             listViewSortAdorner = new SortAdorner(listViewSortCol, newDir);
             AdornerLayer.GetAdornerLayer(listViewSortCol).Add(listViewSortAdorner);
             lvRecordingsFound.Items.SortDescriptions.Add(new SortDescription(sortBy, newDir));
+            //ICollectionView view = CollectionViewSource.GetDefaultView(lvRecordingsFound.ItemsSource);
+            //view.SortDescriptions.Add(new SortDescription(sortBy, newDir));
         }
     }
 }

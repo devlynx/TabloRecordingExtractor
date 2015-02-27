@@ -38,6 +38,16 @@
                         </GridViewColumn>
                     </GridView>
                 </ListView.View>
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsNotFinished}" Value="True">
+                                <Setter Property="IsEnabled" Value="False"/>
+                                <Setter Property="ToolTip" Value="Recording not finished"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ListView.ItemContainerStyle>
             </ListView>
         </GroupBox>
         <Button Content="Extract Selected Items" HorizontalAlignment="Left" Margin="10,0,0,10" Width="127" Name="btnExtract" Click="btnExtract_Click" Height="22" VerticalAlignment="Bottom" IsEnabled="False"/>

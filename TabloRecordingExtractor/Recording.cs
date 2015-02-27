@@ -8,7 +8,14 @@ namespace TabloRecordingExtractor
         public int Id { get; set; }
         public string Description { get; set; }
         public DateTime RecordedOnDate { get; set; }
+        public bool IsNotFinished { get; set; }
+
+        public Recording()
+        {
+            IsNotFinished = false;
+        }
     }
 
-    public enum RecordingType { Episode, Movie, Manual };
+
+    public enum RecordingType { Episode, Movie, Sports, Manual };
 }

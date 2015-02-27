@@ -4,13 +4,48 @@ namespace TabloRecordingExtractor
 {
     public class Relationships
     {
+        public int recChannel { get; set; }
         public int recSeason { get; set; }
         public int recSeries { get; set; }
         public int recMovie { get; set; }
-        public int recChannel { get; set; }
         public int recManualProgram { get; set; }
+        public int recSportOrganization { get; set; }
+    }
+    
+    public class Team
+    {
+        public string title { get; set; }
+        public string type { get; set; }
+        public int teamID { get; set; }
+        public bool? isHome { get; set; }
     }
 
+    public class Team2
+    {
+        public string name { get; set; }
+        public string teamBrandId { get; set; }
+        public bool? isHome { get; set; }
+    }
+
+    public class Team3
+    {
+        public string name { get; set; }
+        public string teamBrandId { get; set; }
+        public bool? isHome { get; set; }
+    }
+
+    public class Venue
+    {
+        public string content { get; set; }
+        public string venueBrandId { get; set; }
+    }
+
+    public class Season
+    {
+        public string content { get; set; }
+        public string type { get; set; }
+    }
+    
     public class Video
     {
         public string state { get; set; }
@@ -29,7 +64,7 @@ namespace TabloRecordingExtractor
         public bool @protected { get; set; }
         public double position { get; set; }
     }
-
+    
     public class JsonForClient
     {
         public string airDate { get; set; }
@@ -45,6 +80,8 @@ namespace TabloRecordingExtractor
         public User user { get; set; }
         public int objectID { get; set; }
         public List<string> qualifiers { get; set; }
+        public string eventTitle { get; set; }
+        public List<Team> teams { get; set; }
     }
 
     public class Image
@@ -86,6 +123,11 @@ namespace TabloRecordingExtractor
         public List<string> topCast { get; set; }
         public QualityRating qualityRating { get; set; }
         public int releaseYear { get; set; }
+        public string eventTitle { get; set; }
+        public string gameDate { get; set; }
+        public string organizationId { get; set; }
+        public string sportsId { get; set; }
+        public List<Team2> teams { get; set; }
     }
 
     public class Rating
@@ -133,6 +175,12 @@ namespace TabloRecordingExtractor
         public ImageJson imageJson { get; set; }
     }
     
+    public class RecSportEvent
+    {
+        public JsonForClient jsonForClient { get; set; }
+        public JsonFromTribune jsonFromTribune { get; set; }
+    }
+
     public class Award
     {
         public string category { get; set; }
@@ -277,6 +325,16 @@ namespace TabloRecordingExtractor
         public List<string> advisories { get; set; }
         public List<string> directors { get; set; }
         public string runTime { get; set; }
+
+        public string eventTitle { get; set; }
+        public string gameDate { get; set; }
+        public List<Team3> teams { get; set; }
+        public string organizationId { get; set; }
+        public string sportsId { get; set; }
+        public string gameTime { get; set; }
+        public string gameTimeZone { get; set; }
+        public Venue venue { get; set; }
+        public Season season { get; set; }
     }
 
     public class Caption
@@ -341,6 +399,14 @@ namespace TabloRecordingExtractor
         public JsonForClient2 jsonForClient { get; set; }
     }
 
+    public class RecSportOrganization
+    {
+        public JsonForClient2 jsonForClient { get; set; }
+        public ImageJson imageJson { get; set; }
+        public JsonFromTribune2 jsonFromTribune { get; set; }
+        public List<ImageJsonFromTribune> imageJsonFromTribune { get; set; }
+    }
+
     public class RecordingMetadata
     {
         public RecEpisode recEpisode { get; set; }
@@ -350,5 +416,7 @@ namespace TabloRecordingExtractor
         public RecMovie recMovie { get; set; }
         public RecManualProgramAiring recManualProgramAiring { get; set; }
         public RecManualProgram recManualProgram { get; set; }
+        public RecSportEvent recSportEvent { get; set; }
+        public RecSportOrganization recSportOrganization { get; set; }
     }
 }
