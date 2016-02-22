@@ -2,8 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:p="clr-namespace:TabloRecordingExtractor.Properties"
-        Title="Tablo Extractor" Height="603.9" Width="609.828" WindowStartupLocation="CenterScreen">
-    <Grid>
+        Title="Tablo Extractor" Height="601.231" Width="724.868" WindowStartupLocation="CenterScreen">
+    <Grid Margin="0,0,0.333,0.667">
         <GroupBox Header="FFMPEG Location" Margin="5,5,5,0" Height="57" VerticalAlignment="Top">
             <Grid>
                 <TextBox Margin="5,5,138,5" x:Name="txtFFMPEGLocation" Text="{Binding FFMPEGLocation, Mode=TwoWay, Source={x:Static p:Settings.Default}}" MouseDoubleClick="txtFFMPEGLocation_MouseDoubleClick" />
@@ -17,46 +17,64 @@
             </Grid>
         </GroupBox>
         <Button Content="Find Recordings" HorizontalAlignment="Left" Margin="5,133,0,0" VerticalAlignment="Top" Width="100" Name="btnFindRecordings" Click="btnFindRecordings_Click" IsEnabled="False"/>
-        <GroupBox Header="Recordings Found" Margin="5,160,5,99">
-            <ListView x:Name="lvRecordingsFound" Margin="5,5,5,5" SelectionMode="Multiple" SelectionChanged="lvRecordingsFound_SelectionChanged">
-                <ListView.View>
-                    <GridView>
-                        <GridViewColumn Width="340" DisplayMemberBinding="{Binding Description}">
-                            <GridViewColumn.Header>
-                                <GridViewColumnHeader Tag="Description" Click="lvRecordingsFound_Click">Description</GridViewColumnHeader>
-                            </GridViewColumn.Header>
-                        </GridViewColumn>
-                        <GridViewColumn Width="60" DisplayMemberBinding="{Binding Type}">
-                            <GridViewColumn.Header>
-                                <GridViewColumnHeader Tag="Type" Click="lvRecordingsFound_Click">Type</GridViewColumnHeader>
-                            </GridViewColumn.Header>
-                        </GridViewColumn>
-                        <GridViewColumn Width="140" DisplayMemberBinding="{Binding RecordedOnDate, StringFormat='{}{0:yyyy-MM-dd hh:mm tt}'}">
-                            <GridViewColumn.Header>
-                                <GridViewColumnHeader Tag="AiredOn" Click="lvRecordingsFound_Click">Aired On</GridViewColumnHeader>
-                            </GridViewColumn.Header>
-                        </GridViewColumn>
-                    </GridView>
-                </ListView.View>
-                <ListView.ItemContainerStyle>
-                    <Style TargetType="ListViewItem">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsNotFinished}" Value="True">
-                                <Setter Property="IsEnabled" Value="False"/>
-                                <Setter Property="ToolTip" Value="Recording not finished"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </ListView.ItemContainerStyle>
-            </ListView>
-        </GroupBox>
-        <Button Content="Extract Selected Items" HorizontalAlignment="Left" Margin="10,0,0,10" Width="127" Name="btnExtract" Click="btnExtract_Click" Height="22" VerticalAlignment="Bottom" IsEnabled="False"/>
-        <GroupBox Header="Output Folder" Margin="10,0,10,37" Height="57" VerticalAlignment="Bottom">
+        <GroupBox Header="Output Folder" Margin="10,0,9.667,109.333" Height="57" VerticalAlignment="Bottom">
             <Grid>
                 <TextBox Margin="5,5,80,5" TextWrapping="Wrap" Text="{Binding Source={x:Static p:Settings.Default}, Path=OutputDirectory, Mode=TwoWay}" x:Name="OutputDirectory" MouseDoubleClick="OutputDirectory_MouseDoubleClick"/>
                 <Button Content="Browse" x:Name="btnBrowse" HorizontalAlignment="Right" Margin="0,5,5,0" VerticalAlignment="Top" Width="65" Click="btnBrowse_Click" Height="24"/>
             </Grid>
         </GroupBox>
-        
+        <Button Content="Select All" HorizontalAlignment="Left" Margin="110,134,0,0" VerticalAlignment="Top" Width="100" x:Name="btnSelectAll" Click="btnSelectAll_Click" IsEnabled="False"/>
+        <Button Content="Deselect All" HorizontalAlignment="Left" Margin="215,134,0,0" VerticalAlignment="Top" Width="100" x:Name="btnDeselectAll" Click="btnDeselectAll_Click" IsEnabled="False"/>
+        <Button Content="Select Similar" HorizontalAlignment="Left" Margin="320,134,0,0" VerticalAlignment="Top" Width="100" x:Name="btnSelectSimilar" Click="btnSelectSimilar_Click" IsEnabled="False"/>
+        <TabControl x:Name="tabControl" Margin="10,160,4.667,171.333">
+            <TabItem Header="Found Recordings">
+                <ListView x:Name="lvRecordingsFound" Margin="5,5,5,5" SelectionMode="Multiple" SelectionChanged="lvRecordingsFound_SelectionChanged">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Width="340" DisplayMemberBinding="{Binding Description}">
+                                <GridViewColumn.Header>
+                                    <GridViewColumnHeader Tag="Description" Click="lvRecordingsFound_Click">Description</GridViewColumnHeader>
+                                </GridViewColumn.Header>
+                            </GridViewColumn>
+                            <GridViewColumn Width="60" DisplayMemberBinding="{Binding Type}">
+                                <GridViewColumn.Header>
+                                    <GridViewColumnHeader Tag="Type" Click="lvRecordingsFound_Click">Type</GridViewColumnHeader>
+                                </GridViewColumn.Header>
+                            </GridViewColumn>
+                            <GridViewColumn Width="140" DisplayMemberBinding="{Binding RecordedOnDate, StringFormat='{}{0:yyyy-MM-dd hh:mm tt}'}">
+                                <GridViewColumn.Header>
+                                    <GridViewColumnHeader Tag="AiredOn" Click="lvRecordingsFound_Click">Aired On</GridViewColumnHeader>
+                                </GridViewColumn.Header>
+                            </GridViewColumn>
+                            <GridViewColumn Width="140" DisplayMemberBinding="{Binding Plot}">
+                                <GridViewColumn.Header>
+                                    <GridViewColumnHeader Tag="Plot" Click="lvRecordingsFound_Click">Plot</GridViewColumnHeader>
+                                </GridViewColumn.Header>
+                            </GridViewColumn>
+                        </GridView>
+                    </ListView.View>
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsNotFinished}" Value="True">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                    <Setter Property="ToolTip" Value="Recording not finished"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                </ListView>
+            </TabItem>
+            <TabItem Header="Log">
+                <Grid Background="#FFE5E5E5">
+                    <ListBox x:Name="logListBox"/>
+                </Grid>
+            </TabItem>
+        </TabControl>
+        <Button Content="Extract Selected Items" HorizontalAlignment="Left" Margin="10,0,0,82.333" Width="124" Name="btnExtract" Click="btnExtract_Click" Height="22" VerticalAlignment="Bottom" IsEnabled="False"/>
+        <Label Name="extractingRecordingLabel" Content="Extracting Recording..." Margin="151,0,9.667,78.333" VerticalAlignment="Bottom"/>
+        <ProgressBar Name="extractProgress" Height="21" Margin="10,0,10,7" VerticalAlignment="Bottom" Value="10"/>
+        <ProgressBar Name="downloadTsFilesProgress" Height="6" Margin="10,0,9.667,31.333" VerticalAlignment="Bottom" Value="20" Foreground="#FFFF4040" />
+        <Label Name="extractingFileCountLabel" Content="FileCount..." Margin="10,0,9.667,52.333" VerticalAlignment="Bottom"/>
     </Grid>
 </Window>
