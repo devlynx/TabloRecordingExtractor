@@ -13,9 +13,7 @@ namespace TabloRecordingExtractor
         public App()
         {
             IKernel kernel = new StandardKernel(new DependencyInjection());
-
             NinjectServiceLocator locator = new NinjectServiceLocator(kernel);
-
             ServiceLocator.SetLocatorProvider(() => locator);
         }
     }

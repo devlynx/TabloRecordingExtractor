@@ -86,11 +86,13 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="DependencyInjection.cs" />
+    <Compile Include="FindTabloRecordings.cs" />
     <Compile Include="IMediaNamingConvention.cs" />
     <Compile Include="PlexMediaNaming.cs" />
     <Compile Include="ProgressInfo.cs" />
     <Compile Include="Recording.cs" />
     <Compile Include="SortAdorner.cs" />
+    <Compile Include="ExtractTabloRecordings.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
