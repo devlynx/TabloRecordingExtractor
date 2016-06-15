@@ -1,4 +1,4 @@
-﻿//#define LimitTSFilesInVideo
+﻿ #define LimitTSFilesInVideo
 
 namespace TabloRecordingExtractor
 {
@@ -8,16 +8,31 @@ namespace TabloRecordingExtractor
     using System.IO;
     using System.Linq;
     using System.Net;
+    using System.Text;
     using System.Threading.Tasks;
     using System.Windows;
+    using log4net;
     using Microsoft.Practices.ServiceLocation;
     using Newtonsoft.Json;
 
-    public class ExtractTabloRecordings
+    public interface IExtractTabloRecordings
     {
+        string TabloIPAddress { get; set; }
+        List<Recording> SelectedRecordings { get; set; }
+        string OutputDirectory { get; set; }
+        string FFMPEGLocation { get; set; }
+        Task ExtractRecordings(IProgress<ProgressBarInfo> primaryProgressBar, IProgress<string> primaryProgressLabel, IProgress<ProgressBarInfo> secondaryProgressBar, IProgress<string> secondaryLabel);
+    }
+    public class ExtractTabloRecordings : IExtractTabloRecordings
+    {
+        private static readonly ILog log = LogManager.GetLogger("ExtractTabloRecordings");
+
         public string TabloIPAddress { get; set; }
+
         public List<Recording> SelectedRecordings { get; set; }
+
         public string OutputDirectory { get; set; }
+
         public string FFMPEGLocation { get; set; }
 
         public async Task ExtractRecordings(
@@ -34,6 +49,7 @@ namespace TabloRecordingExtractor
             {
                 if (recording != null)
                 {
+                    log.InfoFormat("Extracting: {0}", recording);
                     primaryProgressLabel.Report(recording.Description);
                     await Task.Delay(5);
                     await GetRecordingVideo(TabloIPAddress, recording, secondaryProgressBar, secondaryLabel);
@@ -50,14 +66,18 @@ namespace TabloRecordingExtractor
         {
             try
             {
-                if (!Directory.Exists(Path.GetTempPath() + "\\TempTabloExtract"))
+                string path = string.Format("{0}\\TempTabloExtract", Path.GetTempPath());
+                if (!Directory.Exists(path))
                 {
-                    Directory.CreateDirectory(Path.GetTempPath() + "\\TempTabloExtract");
+                    log.InfoFormat("Creating directory: {0}", path);
+                    Directory.CreateDirectory(path);
                 }
             }
             catch (IOException ex)
             {
-                MessageBox.Show(string.Format("Unable to create temporary directory at '{0}\\TempTabloExtract'", Path.GetTempPath()));
+                string text = string.Format("Unable to create temporary directory at '{0}\\TempTabloExtract'", Path.GetTempPath());
+                log.Debug(text, ex);
+                MessageBox.Show(text);
                 return;
             }
 
@@ -70,7 +90,9 @@ namespace TabloRecordingExtractor
             }
             catch (IOException ex)
             {
-                MessageBox.Show(string.Format("Unable to create output directory at '{0}'", OutputDirectory));
+                string text = string.Format("Unable to create output directory at '{0}'", OutputDirectory);
+                log.Debug(text, ex);
+                MessageBox.Show(text);
                 return;
             }
 
@@ -100,17 +122,19 @@ namespace TabloRecordingExtractor
             else if (recording.Type == RecordingType.Manual)
                 OutputFile = mediaNamingConvention.GetManualOutputFileName(OutputDirectory, recording);
             else
-                OutputFile = mediaNamingConvention.GetOtherOutupuFileName(OutputDirectory, recording);
+                OutputFile = mediaNamingConvention.GetOtherOutputFileName(OutputDirectory, recording);
 
             if (File.Exists(OutputFile))
             {
-                //logListBox.Items.Add(String.Format("File {0} already exists - skipping", OutputFile));
+                log.InfoFormat(String.Format("File {0} already exists - skipping", OutputFile));
                 return;
             }
 
             if (!File.Exists(FFMPEGLocation))
             {
-                MessageBox.Show("FFMPEG could not be found. It must be located before you can proceed.");
+                string notFound = "FFMPEG could not be found. It must be located before you can proceed.";
+                log.InfoFormat(notFound);
+                MessageBox.Show(notFound);
                 return;
             }
             try
@@ -118,22 +142,28 @@ namespace TabloRecordingExtractor
                 FileInfo fileInfo = new FileInfo(FFMPEGLocation);
                 if (fileInfo.Name != "ffmpeg.exe")
                 {
-                    MessageBox.Show("The file name provided for FFMPEG was not \"ffpmeg.exe\". It must be located before you can proceed.");
+                    string notFound = "The file name provided for FFMPEG was not \"ffpmeg.exe\". It must be located before you can proceed.";
+                    log.InfoFormat(notFound);
+                    MessageBox.Show(notFound);
                     return;
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                MessageBox.Show("There was a problem reading from the FFMPEG exe. It must be located before you can proceed.");
+                string notFound = "There was a problem reading from the FFMPEG exe. It must be located before you can proceed.";
+                log.Info(notFound, ex);
+                MessageBox.Show(notFound);
                 return;
             }
 
             string webPageText;
             using (WebClient client = new WebClient())
             {
-                webPageText = client.DownloadString(string.Format("http://{0}:18080/pvr/{1}/segs/", IPAddress, recording.Id));
+                string webAddress = string.Format("http://{0}:18080/pvr/{1}/segs/", IPAddress, recording.Id);
+                log.InfoFormat("Downloading web resource from: {0}", webAddress);
+                webPageText = client.DownloadString(webAddress);
             }
-
+            log.Info("Getting TS files...");
             List<string> tsFileNames = new List<string>();
             foreach (var line in webPageText.Split(new string[] { "\r\n", "\n" }, StringSplitOptions.None))
             {
@@ -143,11 +173,12 @@ namespace TabloRecordingExtractor
                     tsFileNames.Add(tsFileName);
                 }
 #if LimitTSFilesInVideo
-                if (tsFileNames.Count == 3)
+                if (tsFileNames.Count == 100)
                     break;
 #endif
             }
 
+            log.InfoFormat("Found {0} TS files for {1}.", tsFileNames.Count(), recording.Description);
             secondaryLabel.Report(String.Format("TS file count: {0}", tsFileNames.Count()));
             await Task.Delay(5);
 
@@ -162,8 +193,10 @@ namespace TabloRecordingExtractor
                 using (WebClient Client = new WebClient())
                 {
                     string downloadURL = String.Format("http://{0}:18080/pvr/{1}/segs/{2}", IPAddress, recording.Id, tsFileName);
-                    string outputFileName = String.Format("{0}\\TempTabloExtract\\{1}-{2}", Path.GetTempPath(), recording.Id, tsFileName);
+                    //  string outputFileName = String.Format("{0}\\TempTabloExtract\\{1}-{2}", Path.GetTempPath(), recording.Id, tsFileName);
+                    string outputFileName = String.Format("{0}\\TempTabloExtract\\{1}", Path.GetTempPath(), tsFileName);
 
+                    log.InfoFormat("Downloading TS file: {0} to {1}", downloadURL, outputFileName);
                     await Client.DownloadFileTaskAsync(downloadURL, outputFileName);
                     tsVideoFileNames.Add(outputFileName);
                 }
@@ -173,58 +206,139 @@ namespace TabloRecordingExtractor
             }
 
             secondaryProgressBar.Report(new ProgressBarInfo() { Maximum = 1, Value = 0 });
-
             //progress.Report(String.Format("Processing in FFMPEG to create '{0}'...", OutputFile));
 
-            ProcessVideosInFFMPEG(tsVideoFileNames, OutputFile, FFMPEGLocation);
+            ProcessVideosInFFMPEG(tsVideoFileNames, recording, OutputFile, FFMPEGLocation);
+
+            //ProcessVideoInHandbrake(String.Format("{0}\\TempTabloExtract", Path.GetTempPath()), OutputFile);
 
             string recordingJson = JsonConvert.SerializeObject(recording, Formatting.Indented);
             string recordingOutputFile = Path.ChangeExtension(OutputFile, ".json");
             if (File.Exists(recordingOutputFile))
                 File.Delete(recordingOutputFile);
             File.WriteAllText(recordingOutputFile, recordingJson);
+            if (!File.Exists(recordingOutputFile))
+                log.ErrorFormat("Recording file: {0} was not written!", recordingOutputFile);
+            else
+                log.InfoFormat("Recording file: {0} written to disk.", recordingOutputFile);
 
             foreach (var outputFileName in tsVideoFileNames)
-            {
                 if (File.Exists(outputFileName))
-                {
                     File.Delete(outputFileName);
-                }
-            }
-
-            //ProcessVideoInHandbrake(OutputFile, OutputFile.Replace(".mp4", ".mkv"));
-
-            //if (File.Exists(OutputFile))
-            //{
-            //    File.Delete(OutputFile);
-            //}
-            //});
         }
 
-        private void ProcessVideosInFFMPEG(List<string> tsFileNames, string OutputFile, string FFMPEGLocation)
+        private void ProcessVideoInHandbrake(string InputPath, string outputFile)
         {
-            string fileNamesConcatString = String.Join("|", tsFileNames.Select(x => x).ToArray());
-
-            using (Process process = new Process())
+            using (Process proc = new Process())
             {
-                process.StartInfo.FileName = FFMPEGLocation;
-                process.StartInfo.Arguments = string.Format("-y -i \"concat:{0}\" -bsf:a aac_adtstoasc -c copy \"{1}\"", fileNamesConcatString, OutputFile);
-                process.StartInfo.RedirectStandardError = true;
-                process.StartInfo.UseShellExecute = false;
-                if (!process.Start())
+                proc.StartInfo.FileName = "C:\\SD\\Program Files\\Handbrake\\HandBrakeCLI.exe";
+                proc.StartInfo.Arguments = String.Format("-i \"{0}\" -f -a 1 -E copy -f mkv -O -e x264 -q 22.0 --loose-anamorphic --modulus 2 -m --x264-preset medium --h264-profile high --h264-level 4.1 --decomb --denoise=weak -v -o \"{1}\"", InputPath, outputFile);
+                proc.StartInfo.RedirectStandardError = true;
+                proc.StartInfo.UseShellExecute = false;
+                if (!proc.Start())
                 {
-                    MessageBox.Show("Error starting ffmpeg");
+                    MessageBox.Show("Error starting Handbrake");
                     return;
                 }
-                StreamReader reader = process.StandardError;
+                StreamReader reader = proc.StandardError;
                 string line;
                 while ((line = reader.ReadLine()) != null)
                 {
                     //lbRecordingIDs.Items.Add(line);
                     //Console.WriteLine(line);
                 }
-                process.Close();
+                proc.Close();
             }
+        }
+
+        private void ProcessVideosInFFMPEG(List<string> tsFileNames, Recording recording, string OutputFile, string FFMPEGLocation)
+        {
+            log.InfoFormat("ProcessVideosInFFMPEG: {0}", recording);
+            StringBuilder tsFileContents = new StringBuilder();
+            foreach (string tsFileName in tsFileNames)
+            {
+                tsFileContents.AppendFormat("file '{0}'\r\n", tsFileName);
+            }
+
+            string FfmpegInputFileName = String.Format("{0}\\TempTabloExtract\\FFMPEG_Input_{1}.txt", Path.GetTempPath(), recording.Id);
+            //string FfmpegStdOutFileName = Path.ChangeExtension(OutputFile, ".log");
+            File.WriteAllText(FfmpegInputFileName, tsFileContents.ToString().TrimEnd());
+
+            using (Process process = new Process())
+            {
+                process.StartInfo.FileName = FFMPEGLocation;
+
+                //-hide_banner -y -f concat -i "C:\Users\mreit\AppData\Local\Temp\TempTabloExtract\FFMPEG_Input_123639.txt" -c copy -bsf:a aac_adtstoasc "C:\SD\Tablo\Movies\Air Cadet (1951)\Air Cadet (1951).mp4"
+                process.StartInfo.Arguments = string.Format("-y -f concat -i {0} -c copy  -bsf:a aac_adtstoasc \"{1}\"", FfmpegInputFileName, OutputFile);
+                // -codec copy -strict -2 -c:a aac -threads 0
+                // -y -i http://10.50.4.103:80/stream/pl.m3u8?9dZXqi37g-Q17Zg4PjPdYQ -codec copy -strict -2 -c:a aac -threads 0 "C:\Tablo\tmp\Foreground_rip.mp4"
+                log.InfoFormat("FFMEPG command line: {0}", process.StartInfo.Arguments);
+                process.StartInfo.RedirectStandardError = true;
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.RedirectStandardOutput = true;
+                process.StartInfo.CreateNoWindow = true;
+
+                log.InfoFormat("Starting FFMPEG for recording: {0}", recording);
+                if (!process.Start())
+                {
+                    string text = "Error starting FFMPEG";
+                    log.Info(text);
+                    MessageBox.Show(text);
+                    return;
+                }
+
+                //string stdOut = process.StandardOutput.ReadToEnd();
+
+                //process.WaitForExit();
+
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+                //MessageBox.Show("Waiting for the process to exit....");
+                log.Info("WaitForExit");
+                process.WaitForExit();
+                if (process.HasExited)
+                {
+                    log.Info("FFMPEG Has Exited");
+                    process.CancelErrorRead();
+                    process.CancelOutputRead();
+                    process.Close();
+                    //MessageBox.Show("Closed");
+                }
+            }
+            //catch (Exception ex)
+            //{
+            //    MessageBox.Show("1.\n" + ex.Message);
+            //}
+
+            //if (process.ExitCode > 0)
+            //{
+            //    MessageBox.Show(String.Format("ffmpeg failure: {0}", process.ExitCode));
+
+            //    StreamReader reader = process.StandardError;
+            //    string line;
+            //    while ((line = reader.ReadLine()) != null)
+            //    {
+            //        //lbRecordingIDs.Items.Add(line);
+            //        //Console.WriteLine(line);
+            //    }
+            //}
+
+            //  process.Close();
+
+            //if (File.Exists(FfmpegStdOutFileName))
+            //    File.Delete(FfmpegStdOutFileName);
+            //File.WriteAllText(FfmpegStdOutFileName, stdOut);
+
+            if (!File.Exists(OutputFile))
+                log.ErrorFormat("Video file: {0} was not written!", OutputFile);
+            else
+            {
+                FileInfo fileInfo = new FileInfo(OutputFile);
+                log.InfoFormat("Video file: {0} written to disk (size: {0}).", OutputFile, fileInfo.Length);
+            }
+
+            if (File.Exists(FfmpegInputFileName))
+                File.Delete(FfmpegInputFileName);
         }
     }
 }

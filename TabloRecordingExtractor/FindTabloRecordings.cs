@@ -1,4 +1,5 @@
-﻿#define LimitRecordingsFound
+﻿//#define LimitRecordingsFound
+//#define TargetSingleRecording
 
 namespace TabloRecordingExtractor
 {
@@ -13,7 +14,9 @@ namespace TabloRecordingExtractor
 
     public class FindTabloRecordings
     {
-        public string TabloIPAddress { get; set; }
+        public IPAddress TabloIPAddress { get; set; }
+
+        public string OutputDirectory { get; set; }
 
         public async Task<ObservableCollection<Recording>> Find(IProgress<ProgressBarInfo> progressBar, IProgress<string> progressFileCountLabel)
         {
@@ -34,19 +37,34 @@ namespace TabloRecordingExtractor
 
             foreach (var foundRecording in foundRecordings)
             {
+                #region IF DEFs
+#if TargetSingleRecording
+                if (foundRecording != 611517)
+                    continue;
+#endif // TargetSingleRecording
+#if LimitRecordingsFound
+                if (recordings.Count == 30)
+                    break;
+#endif // LimitRecordingsFound
+                #endregion
                 RecordingMetadata metadata = GetRecordingMetadata(TabloIPAddress, foundRecording);
                 if (metadata != null)
                 {
+                    if (i % 10 == 0)
+                        progressFileCountLabel.Report(String.Format("Loading metadata for recordings found: {0} of {1}", i, foundCount));
+
                     Recording recording = new Recording() { Id = foundRecording, Metadata = metadata };
                     if (recording.Metadata.recEpisode != null)
                     {
                         recording.Type = RecordingType.Episode;
-                        recording.Description = mediaNamingConvention.GetEpisodeDescription(recording);
+                        if (recording.IsS00E00)
+                            recording.Description = mediaNamingConvention.GetS00E00Description(OutputDirectory, recording, recordings);
+                        else
+                            recording.Description = mediaNamingConvention.GetEpisodeDescription(recording);
                         recording.Plot = recording.Metadata.recEpisode.jsonForClient.description;
                         recording.RecordedOnDate = DateTime.Parse(recording.Metadata.recEpisode.jsonForClient.airDate);
-
                         if (recording.Metadata.recEpisode.jsonForClient.video.state.ToLower() != "finished")
-                            recording.IsNotFinished = true;
+                            recording.HasFinishedRecording = false;
                     }
                     else if (recording.Metadata.recMovie != null)
                     {
@@ -56,7 +74,7 @@ namespace TabloRecordingExtractor
                         recording.Plot = recording.Metadata.recMovie.jsonForClient.plot;
 
                         if (recording.Metadata.recMovieAiring.jsonForClient.video.state.ToLower() != "finished")
-                            recording.IsNotFinished = true;
+                            recording.HasFinishedRecording = false;
                     }
                     else if (recording.Metadata.recSportEvent != null)
                     {
@@ -66,7 +84,7 @@ namespace TabloRecordingExtractor
                         recording.Plot = recording.Metadata.recSportEvent.jsonForClient.description;
 
                         if (recording.Metadata.recSportEvent.jsonForClient.video.state.ToLower() != "finished")
-                            recording.IsNotFinished = true;
+                            recording.HasFinishedRecording = false;
                     }
                     else if (recording.Metadata.recManualProgram != null)
                     {
@@ -75,7 +93,7 @@ namespace TabloRecordingExtractor
                         recording.RecordedOnDate = DateTime.Parse(recording.Metadata.recManualProgramAiring.jsonForClient.airDate);
 
                         if (recording.Metadata.recManualProgramAiring.jsonForClient.video.state.ToLower() != "finished")
-                            recording.IsNotFinished = true;
+                            recording.HasFinishedRecording = false;
                     }
                     else //If this is not a recognized recording type
                     {
@@ -86,21 +104,16 @@ namespace TabloRecordingExtractor
                     i++;
                     progressBar.Report(new ProgressBarInfo() { Maximum = null, Value = i });
                     await Task.Delay(10);
-
-#if LimitRecordingsFound
-                    if (recordings.Count == 30)
-                        break;
-#endif // LimitRecordingsFound
                 }
             }
             // });
-            progressFileCountLabel.Report(String.Empty);
+            progressFileCountLabel.Report(String.Format("Loading metadata for recordings found: {0}", foundCount));
             progressBar.Report(new ProgressBarInfo() { Maximum = null, Value = 0 });
             await Task.Delay(10);
             return recordings;
         }
 
-        private async Task<List<int>> GetRecordingList(string IPAddress)
+        private async Task<List<int>> GetRecordingList(IPAddress IPAddress)
         {
             List<int> recordingIDs = new List<int>();
             string webPageText;
@@ -124,7 +137,7 @@ namespace TabloRecordingExtractor
             return recordingIDs;
         }
 
-        private RecordingMetadata GetRecordingMetadata(string IPAddress, int RecordingID)
+        private RecordingMetadata GetRecordingMetadata(IPAddress IPAddress, int RecordingID)
         {
             string metadata;
             using (WebClient client = new WebClient())

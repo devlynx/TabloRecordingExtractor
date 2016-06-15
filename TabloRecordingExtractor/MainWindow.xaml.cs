@@ -1,6 +1,4 @@
-﻿#define LimitRecordingsFound
-
-namespace TabloRecordingExtractor
+﻿namespace TabloRecordingExtractor
 {
     using System;
     using System.Collections.Generic;
@@ -8,7 +6,6 @@ namespace TabloRecordingExtractor
     using System.ComponentModel;
     using System.Diagnostics;
     using System.IO;
-    using System.Linq;
     using System.Net;
     using System.Windows;
     using System.Windows.Controls;
@@ -25,20 +22,54 @@ namespace TabloRecordingExtractor
         private GridViewColumnHeader listViewSortCol = null;
         private Recording selectedRecording = null;
 
+        private IPAddress TabloAddress
+        {
+            get
+            {
+                if (txtTabloIPAddress.Visibility == Visibility.Visible)
+                    return IPAddress.Parse(txtTabloIPAddress.Text);
+                else
+                    return ((CPES)tabloComboBox.SelectedItem).private_ip;
+            }
+        }
+
         public MainWindow()
         {
             InitializeComponent();
+            // Set up a simple configuration that logs on the console.
+            log4net.Config.XmlConfigurator.Configure();
+        }
+
+        internal void ReportPrimaryLabel(string message)
+        {
+            extractingRecordingLabel.Content = message;
+        }
+
+        internal void ReportPrimaryProgress(ProgressBarInfo progressInfo)
+        {
+            if (progressInfo.Maximum != null)
+                extractProgress.Maximum = progressInfo.Maximum.Value;
+            if (progressInfo.Value != null)
+                extractProgress.Value = progressInfo.Value.Value;
+        }
+
+        internal void ReportSecondaryLabel(string message)
+        {
+            extractingFileCountLabel.Content = message;
+        }
+
+        internal void ReportSecondaryProgress(ProgressBarInfo progressInfo)
+        {
+            if (progressInfo.Maximum != null)
+                downloadTsFilesProgress.Maximum = progressInfo.Maximum.Value;
+            if (progressInfo.Value != null)
+                downloadTsFilesProgress.Value = progressInfo.Value.Value;
         }
 
         protected override void OnClosing(CancelEventArgs e)
         {
             Properties.Settings.Default.Save();
             base.OnClosing(e);
-        }
-
-        private static string CleanFileName(string fileName)
-        {
-            return Path.GetInvalidFileNameChars().Aggregate(fileName, (current, c) => current.Replace(c.ToString(), string.Empty));
         }
 
         private void btnBrowse_Click(object sender, RoutedEventArgs e)
@@ -49,6 +80,7 @@ namespace TabloRecordingExtractor
         private void btnDeselectAll_Click(object sender, RoutedEventArgs e)
         {
             lvRecordingsFound.SelectedItems.Clear();
+            SetSelectedCountLabel();
         }
 
         private async void btnExtract_Click(object sender, RoutedEventArgs e)
@@ -78,33 +110,6 @@ namespace TabloRecordingExtractor
 
             await extractor.ExtractRecordings(primaryProgressBar, primaryProgressLabel, secondaryProgressBar, secondaryProgressLabel);
         }
-
-        internal void ReportPrimaryProgress(ProgressBarInfo progressInfo)
-        {
-            if (progressInfo.Maximum != null)
-                extractProgress.Maximum = progressInfo.Maximum.Value;
-            if (progressInfo.Value != null)
-                extractProgress.Value = progressInfo.Value.Value;
-        }
-        
-        internal void ReportSecondaryProgress(ProgressBarInfo progressInfo)
-        {
-            if (progressInfo.Maximum != null)
-                downloadTsFilesProgress.Maximum = progressInfo.Maximum.Value;
-            if (progressInfo.Value != null)
-                downloadTsFilesProgress.Value = progressInfo.Value.Value;
-        }
-
-        internal void ReportSecondaryLabel(string message)
-        {
-            extractingFileCountLabel.Content = message;
-        }
-
-        internal void ReportPrimaryLabel(string message)
-        {
-            extractingRecordingLabel.Content = message;
-        }
-
         private async void btnFindRecordings_Click(object sender, RoutedEventArgs e)
         {
             this.Cursor = Cursors.Wait;
@@ -118,7 +123,8 @@ namespace TabloRecordingExtractor
 
                 FindTabloRecordings tabloRecordings = new FindTabloRecordings()
                 {
-                    TabloIPAddress = txtTabloIPAddress.Text
+                    TabloIPAddress = TabloAddress,
+                    OutputDirectory = OutputDirectory.Text,
                 };
 
                 ObservableCollection<Recording> recordings = await tabloRecordings.Find(secondaryProgressBar, secondaryProgressLabel);
@@ -129,6 +135,7 @@ namespace TabloRecordingExtractor
                 btnSelectAll.IsEnabled = true;
                 btnDeselectAll.IsEnabled = true;
                 btnSelectSimilar.IsEnabled = true;
+                btnSelectSpecials.IsEnabled = true;
             }
             finally
             {
@@ -145,7 +152,9 @@ namespace TabloRecordingExtractor
         {
             btnDeselectAll_Click(sender, e);
             lvRecordingsFound.SelectAll();
+            SetSelectedCountLabel();
         }
+
         private void btnSelectSimilar_Click(object sender, RoutedEventArgs e)
         {
             Recording similarToRecording = selectedRecording;
@@ -170,32 +179,40 @@ namespace TabloRecordingExtractor
                 else if (recording.Type == similarToRecording.Type)
                     lvRecordingsFound.SelectedItems.Add(recording);
             }
+            SetSelectedCountLabel();
         }
-        private void btnValidateTablo_Click(object sender, RoutedEventArgs e)
-        {
-            IPAddress tabloIPaddress;
 
-            if (IPAddress.TryParse(txtTabloIPAddress.Text, out tabloIPaddress))
+        private void btnSelectSpecials_Click(object sender, RoutedEventArgs e)
+        {
+            btnDeselectAll_Click(sender, e);
+
+            foreach (var item in lvRecordingsFound.Items)
+            {
+                Recording recording = item as Recording;
+                if (recording.IsS00E00)
+                    lvRecordingsFound.SelectedItems.Add(recording);
+            }
+            SetSelectedCountLabel();
+        }
+
+        private void ValidateTablo(IPAddress tabloIPAddress)
+        {
+            if (!doValidateCheckBox.IsChecked.Value)
+                btnFindRecordings.IsEnabled = true;
+            else
             {
                 try
                 {
                     using (WebClient client = new WebClient())
                     {
-                        string webPageText = client.DownloadString(string.Format("http://{0}:18080", txtTabloIPAddress.Text));
+                        string webPageText = client.DownloadString(string.Format("http://{0}:18080", tabloIPAddress));
+                        btnFindRecordings.IsEnabled = true;
                     }
-                    MessageBox.Show(string.Format("Tablo validated at {0}.", tabloIPaddress));
-                    txtTabloIPAddress.IsEnabled = false;
-                    btnValidateTablo.IsEnabled = false;
-                    btnFindRecordings.IsEnabled = true;
                 }
-                catch (WebException ex)
+                catch (Exception e)
                 {
-                    MessageBox.Show("Tablo data not found at the IP Address entered. Please try again.");
+                    MessageBox.Show(String.Format("Could not validate the Tablo at IPAddress{0}", tabloIPAddress));
                 }
-            }
-            else
-            {
-                MessageBox.Show("The text entered is not a valid IP address. Please try again.");
             }
         }
 
@@ -234,6 +251,7 @@ namespace TabloRecordingExtractor
             {
                 btnExtract.IsEnabled = false;
             }
+            SetSelectedCountLabel();
         }
 
         private void OutputDirectory_MouseDoubleClick(object sender, MouseButtonEventArgs e)
@@ -265,17 +283,23 @@ namespace TabloRecordingExtractor
             }
         }
 
+        private void SetSelectedCountLabel()
+        {
+            totalSelectedLabel.Content = String.Format("# Selected: {0:n0}", lvRecordingsFound.SelectedItems.Count);
+        }
         private void ShowFFMPEGFindDialog()
         {
-            var dialog = new System.Windows.Forms.OpenFileDialog();
-            dialog.Filter = "FFMPEG Application|ffmpeg.exe";
+            System.Windows.Forms.OpenFileDialog dialog = new System.Windows.Forms.OpenFileDialog()
+            {
+                Filter = "FFMPEG Application|ffmpeg.exe"
+            };
             System.Windows.Forms.DialogResult result = dialog.ShowDialog();
             txtFFMPEGLocation.Text = dialog.FileName;
         }
 
         private void ShowOutputFolderSelectDialog()
         {
-            var dialog = new System.Windows.Forms.FolderBrowserDialog();
+            System.Windows.Forms.FolderBrowserDialog dialog = new System.Windows.Forms.FolderBrowserDialog();
             System.Windows.Forms.DialogResult result = dialog.ShowDialog();
             OutputDirectory.Text = dialog.SelectedPath;
         }
@@ -283,6 +307,47 @@ namespace TabloRecordingExtractor
         private void txtFFMPEGLocation_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             ShowFFMPEGFindDialog();
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            List<CPES> tabloList = TabloAPI.GetCpesList();
+            tabloComboBox.Items.Clear();
+            if (tabloList.Count > 0)
+            {
+                txtTabloIPAddress.Visibility = Visibility.Hidden;
+
+                foreach (CPES cpes in tabloList)
+                    tabloComboBox.Items.Add(cpes);
+                tabloComboBox.SelectedIndex = 0;
+                ValidateTablo(((CPES)tabloComboBox.SelectedItem).private_ip);
+            }
+            else
+            {
+                txtTabloIPAddress.Visibility = Visibility.Visible;
+                tabloComboBox.Visibility = Visibility.Hidden;
+            }
+        }
+
+        private void txtTabloIPAddress_LostFocus(object sender, RoutedEventArgs e)
+        {
+            IPAddress tabloIPAddress;
+
+            if (IPAddress.TryParse(txtTabloIPAddress.Text, out tabloIPAddress))
+            {
+                try
+                {
+                    ValidateTablo(tabloIPAddress);
+                }
+                catch (WebException ex)
+                {
+                    MessageBox.Show("Tablo data not found at the IP Address entered. Please try again.");
+                }
+            }
+            else
+            {
+                MessageBox.Show("The text entered is not a valid IP address. Please try again.");
+            }
         }
     }
 }
