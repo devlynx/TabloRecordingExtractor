@@ -7,6 +7,7 @@ namespace TabloRecordingExtractor
         public override void Load()
         {
             Bind<IMediaNamingConvention>().To<PlexMediaNaming>();
+            Bind<IExtractTabloRecordings>().To<ExtractTabloRecordingsWatchMethod>();
         }
     }
 }

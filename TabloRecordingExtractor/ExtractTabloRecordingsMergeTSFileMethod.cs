@@ -15,24 +15,12 @@ namespace TabloRecordingExtractor
     using Microsoft.Practices.ServiceLocation;
     using Newtonsoft.Json;
 
-    public interface IExtractTabloRecordings
-    {
-        string TabloIPAddress { get; set; }
-        List<Recording> SelectedRecordings { get; set; }
-        string OutputDirectory { get; set; }
-        string FFMPEGLocation { get; set; }
-        Task ExtractRecordings(IProgress<ProgressBarInfo> primaryProgressBar, IProgress<string> primaryProgressLabel, IProgress<ProgressBarInfo> secondaryProgressBar, IProgress<string> secondaryLabel);
-    }
-    public class ExtractTabloRecordings : IExtractTabloRecordings
+    public class ExtractTabloRecordingsMergeTSFileMethod : IExtractTabloRecordings
     {
         private static readonly ILog log = LogManager.GetLogger("ExtractTabloRecordings");
-
-        public string TabloIPAddress { get; set; }
-
+        public IPEndPoint TabloEndPoint { get; set; }
         public List<Recording> SelectedRecordings { get; set; }
-
         public string OutputDirectory { get; set; }
-
         public string FFMPEGLocation { get; set; }
 
         public async Task ExtractRecordings(
@@ -52,7 +40,7 @@ namespace TabloRecordingExtractor
                     log.InfoFormat("Extracting: {0}", recording);
                     primaryProgressLabel.Report(recording.Description);
                     await Task.Delay(5);
-                    await GetRecordingVideo(TabloIPAddress, recording, secondaryProgressBar, secondaryLabel);
+                    await GetRecordingVideo(TabloEndPoint, recording, secondaryProgressBar, secondaryLabel);
                     i++;
                     primaryProgressBar.Report(new ProgressBarInfo() { Maximum = null, Value = i });
                     await Task.Delay(5);
@@ -60,7 +48,7 @@ namespace TabloRecordingExtractor
             }
         }
 
-        private async Task GetRecordingVideo(string IPAddress, Recording recording,
+        private async Task GetRecordingVideo(IPEndPoint ipEndPoint, Recording recording,
             IProgress<ProgressBarInfo> secondaryProgressBar,
             IProgress<string> secondaryLabel)
         {
@@ -159,7 +147,7 @@ namespace TabloRecordingExtractor
             string webPageText;
             using (WebClient client = new WebClient())
             {
-                string webAddress = string.Format("http://{0}:18080/pvr/{1}/segs/", IPAddress, recording.Id);
+                string webAddress = string.Format("http://{0}:18080/pvr/{1}/segs/", TabloEndPoint.Address, recording.Id);
                 log.InfoFormat("Downloading web resource from: {0}", webAddress);
                 webPageText = client.DownloadString(webAddress);
             }
@@ -192,7 +180,7 @@ namespace TabloRecordingExtractor
                 //progress.Report(String.Format("  Downloading '{0}'...", tsFileName));
                 using (WebClient Client = new WebClient())
                 {
-                    string downloadURL = String.Format("http://{0}:18080/pvr/{1}/segs/{2}", IPAddress, recording.Id, tsFileName);
+                    string downloadURL = String.Format("http://{0}:18080/pvr/{1}/segs/{2}", TabloEndPoint.Address, recording.Id, tsFileName);
                     //  string outputFileName = String.Format("{0}\\TempTabloExtract\\{1}-{2}", Path.GetTempPath(), recording.Id, tsFileName);
                     string outputFileName = String.Format("{0}\\TempTabloExtract\\{1}", Path.GetTempPath(), tsFileName);
 

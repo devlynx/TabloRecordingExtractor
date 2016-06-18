@@ -4,7 +4,7 @@
     using Newtonsoft.Json;
     using RestSharp;
     using System.Collections.Generic;
-
+    using System.Net;
     static class TabloAPI
     {
         public static List<CPES> GetCpesList()
@@ -34,6 +34,26 @@
                 return emptyList;
             }
             return emptyList;
+        }
+
+        public static RecordingWatch GetRecordingWatch(Recording recording, IPEndPoint TabloEndPoint)
+        {
+            RestClient client = new RestClient(String.Format("http://{0}:{1}", TabloEndPoint.Address, TabloEndPoint.Port));
+            RestRequest request = new RestRequest(String.Format("/recordings/series/episodes/{0}/watch", recording.Id), Method.POST);
+
+            IRestResponse response = client.Execute(request);
+            string content = response.Content;
+
+            RecordingWatch recordingWatch;
+            try
+            {
+                recordingWatch = JsonConvert.DeserializeObject<RecordingWatch>(content);
+            }
+            catch (Exception e)
+            {
+                return null;
+            }
+            return recordingWatch;
         }
     }
 }

@@ -94,6 +94,9 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="CES.cs" />
+    <Compile Include="ExtractTabloRecordingsWatchMethod.cs" />
+    <Compile Include="IExtractTabloRecordings.cs" />
+    <Compile Include="RecordingWatch.cs" />
     <Compile Include="DependencyInjection.cs" />
     <Compile Include="FindTabloRecordings.cs" />
     <Compile Include="IMediaNamingConvention.cs" />
@@ -102,7 +105,7 @@
     <Compile Include="ProgressInfo.cs" />
     <Compile Include="Recording.cs" />
     <Compile Include="SortAdorner.cs" />
-    <Compile Include="ExtractTabloRecordings.cs" />
+    <Compile Include="ExtractTabloRecordingsMergeTSFileMethod.cs" />
     <Compile Include="TabloAPI.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>

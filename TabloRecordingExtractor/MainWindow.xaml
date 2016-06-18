@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:p="clr-namespace:TabloRecordingExtractor.Properties"
         Title="Tablo Extractor" Height="620.231" Width="724.868" WindowStartupLocation="CenterScreen" Loaded="Window_Loaded">
-    <Grid Margin="0,3,0,-4.333">
+    <Grid Margin="0,4,0,-5.333">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="495*"/>
             <ColumnDefinition Width="223*"/>
@@ -22,7 +22,7 @@
             </Grid>
         </GroupBox>
         <Button Content="Find Recordings" HorizontalAlignment="Left" Margin="11,153,0,0" VerticalAlignment="Top" Width="100" Name="btnFindRecordings" Click="btnFindRecordings_Click" IsEnabled="False"/>
-        <GroupBox Header="Output Folder" Margin="10,0,10,83" Height="57" VerticalAlignment="Bottom" Grid.ColumnSpan="2">
+        <GroupBox Header="Output Folder" Margin="10,0,10,91" Height="57" VerticalAlignment="Bottom" Grid.ColumnSpan="2">
             <Grid>
                 <TextBox Margin="5,5,80,5" TextWrapping="Wrap" Text="{Binding Source={x:Static p:Settings.Default}, Path=OutputDirectory, Mode=TwoWay}" x:Name="OutputDirectory" MouseDoubleClick="OutputDirectory_MouseDoubleClick"/>
                 <Button Content="Browse" x:Name="btnBrowse" HorizontalAlignment="Right" Margin="0,5,5,0" VerticalAlignment="Top" Width="65" Click="btnBrowse_Click" Height="24"/>
@@ -76,12 +76,12 @@
                 </Grid>
             </TabItem>
         </TabControl>
-        <Button Content="Extract Selected Items" HorizontalAlignment="Left" Margin="9,0,0,55" Width="124" Name="btnExtract" Click="btnExtract_Click" Height="22" VerticalAlignment="Bottom" IsEnabled="False"/>
-        <Label Name="extractingRecordingLabel" Content="" Margin="138,0,10,80" VerticalAlignment="Bottom" Grid.ColumnSpan="2"/>
-        <ProgressBar Name="extractProgress" Height="21" Margin="5,0,5,20" VerticalAlignment="Bottom" Grid.ColumnSpan="2"/>
-        <ProgressBar Name="downloadTsFilesProgress" Height="6" Margin="5,0,5,41" VerticalAlignment="Bottom" Foreground="#FFFF4040" Grid.ColumnSpan="2" />
-        <Label Name="extractingFileCountLabel" Content="" Margin="138,0,10,51" VerticalAlignment="Bottom" Grid.ColumnSpan="2"/>
-        <Label Name="totalSelectedLabel" Content="" Margin="10,0,360.667,51" VerticalAlignment="Bottom"/>
+        <Button Content="Extract Selected Items" HorizontalAlignment="Left" Margin="11,0,0,53" Width="124" Name="btnExtract" Click="btnExtract_Click" Height="33" VerticalAlignment="Bottom" IsEnabled="False"/>
+        <Label Name="extractingRecordingLabel" Content="" Margin="138,0,10,77" VerticalAlignment="Bottom" Grid.ColumnSpan="2"/>
+        <ProgressBar Name="extractProgress" Height="21" Margin="5,0,5,15" VerticalAlignment="Bottom" Grid.ColumnSpan="2"/>
+        <ProgressBar Name="downloadTsFilesProgress" Height="6" Margin="5,0,5,36" VerticalAlignment="Bottom" Foreground="#FFFF4040" Grid.ColumnSpan="2" />
+        <Label Name="extractingFileCountLabel" Content="" Margin="269,0,8,58" VerticalAlignment="Bottom" Grid.ColumnSpan="2"/>
+        <Label Name="totalSelectedLabel" Content="" Margin="138,0,232.667,58" VerticalAlignment="Bottom"/>
         <Button Content="Select Specials" HorizontalAlignment="Left" Margin="431,153,0,0" VerticalAlignment="Top" Width="102" x:Name="btnSelectSpecials" Click="btnSelectSpecials_Click" IsEnabled="False" RenderTransformOrigin="0.495,0.543" Height="21" Grid.ColumnSpan="2"/>
     </Grid>
 </Window>

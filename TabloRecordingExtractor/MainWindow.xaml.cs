@@ -1,5 +1,6 @@
 ﻿namespace TabloRecordingExtractor
 {
+    using Microsoft.Practices.ServiceLocation;
     using System;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
@@ -22,14 +23,14 @@
         private GridViewColumnHeader listViewSortCol = null;
         private Recording selectedRecording = null;
 
-        private IPAddress TabloAddress
+        private IPEndPoint TabloEndPoint
         {
             get
             {
                 if (txtTabloIPAddress.Visibility == Visibility.Visible)
-                    return IPAddress.Parse(txtTabloIPAddress.Text);
+                    return new IPEndPoint(IPAddress.Parse(txtTabloIPAddress.Text), 8885);
                 else
-                    return ((CPES)tabloComboBox.SelectedItem).private_ip;
+                    return new IPEndPoint(((CPES)tabloComboBox.SelectedItem).private_ip, 8885);
             }
         }
 
@@ -100,15 +101,13 @@
                 selectedRecordings.Add(recording);
             }
 
-            ExtractTabloRecordings extractor = new ExtractTabloRecordings()
-            {
-                TabloIPAddress = txtTabloIPAddress.Text,
-                SelectedRecordings = selectedRecordings,
-                OutputDirectory = OutputDirectory.Text,
-                FFMPEGLocation = txtFFMPEGLocation.Text,
-            };
+            IExtractTabloRecordings extractRecordingMethod = ServiceLocator.Current.GetInstance<IExtractTabloRecordings>();
+            extractRecordingMethod.TabloEndPoint = this.TabloEndPoint;
+            extractRecordingMethod.SelectedRecordings = selectedRecordings;
+            extractRecordingMethod.OutputDirectory = OutputDirectory.Text;
+            extractRecordingMethod.FFMPEGLocation = txtFFMPEGLocation.Text;
 
-            await extractor.ExtractRecordings(primaryProgressBar, primaryProgressLabel, secondaryProgressBar, secondaryProgressLabel);
+            await extractRecordingMethod.ExtractRecordings(primaryProgressBar, primaryProgressLabel, secondaryProgressBar, secondaryProgressLabel);
         }
         private async void btnFindRecordings_Click(object sender, RoutedEventArgs e)
         {
@@ -123,7 +122,7 @@
 
                 FindTabloRecordings tabloRecordings = new FindTabloRecordings()
                 {
-                    TabloIPAddress = TabloAddress,
+                    TabloIPAddress = this.TabloEndPoint.Address,
                     OutputDirectory = OutputDirectory.Text,
                 };
 

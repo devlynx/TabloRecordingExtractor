@@ -1,4 +1,4 @@
-﻿//#define LimitRecordingsFound
+﻿#define LimitRecordingsFound
 //#define TargetSingleRecording
 
 namespace TabloRecordingExtractor
@@ -43,7 +43,7 @@ namespace TabloRecordingExtractor
                     continue;
 #endif // TargetSingleRecording
 #if LimitRecordingsFound
-                if (recordings.Count == 30)
+                if (recordings.Count == 10)
                     break;
 #endif // LimitRecordingsFound
                 #endregion
