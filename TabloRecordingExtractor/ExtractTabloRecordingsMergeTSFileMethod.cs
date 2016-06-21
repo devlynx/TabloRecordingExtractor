@@ -1,4 +1,4 @@
-﻿ #define LimitTSFilesInVideo
+﻿// #define LimitTSFilesInVideo
 
 namespace TabloRecordingExtractor
 {

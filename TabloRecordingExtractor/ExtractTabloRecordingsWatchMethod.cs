@@ -1,20 +1,19 @@
-﻿#define LimitTSFilesInVideo
+﻿//#define LimitTSFilesInVideo
 
 namespace TabloRecordingExtractor
 {
+    using log4net;
+    using Microsoft.Practices.ServiceLocation;
+    using Newtonsoft.Json;
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
     using System.Net;
-    using System.Text;
     using System.Threading.Tasks;
     using System.Windows;
-    using log4net;
-    using Microsoft.Practices.ServiceLocation;
-    using Newtonsoft.Json;
-    
+
     public class ExtractTabloRecordingsWatchMethod : IExtractTabloRecordings
     {
         private static readonly ILog log = LogManager.GetLogger("ExtractTabloRecordings");
@@ -150,7 +149,7 @@ namespace TabloRecordingExtractor
 
             RecordingWatch recordingWatch = TabloAPI.GetRecordingWatch(recording, TabloEndPoint);
 
-            if (ProcessVideosInFFMPEG(recordingWatch.playlist_url, recording, OutputFile, FFMPEGLocation, secondaryProgressBar, secondaryLabel))
+            if (await ProcessVideosInFFMPEG(recordingWatch.playlist_url, recording, OutputFile, FFMPEGLocation, secondaryProgressBar, secondaryLabel))
             {
                 string recordingJson = JsonConvert.SerializeObject(recording, Formatting.Indented);
                 string recordingOutputFile = Path.ChangeExtension(OutputFile, ".json");
@@ -164,7 +163,7 @@ namespace TabloRecordingExtractor
             }
         }
 
-        private bool ProcessVideosInFFMPEG(string playListURL, Recording recording, string OutputFile, string FFMPEGLocation, IProgress<ProgressBarInfo> secondaryProgressBar,
+        private async Task<bool> ProcessVideosInFFMPEG(string playListURL, Recording recording, string OutputFile, string FFMPEGLocation, IProgress<ProgressBarInfo> secondaryProgressBar,
             IProgress<string> secondaryLabel)
         {
             log.InfoFormat("ProcessVideosInFFMPEG: {0}", recording);

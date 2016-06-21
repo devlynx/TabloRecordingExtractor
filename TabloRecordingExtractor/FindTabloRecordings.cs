@@ -1,4 +1,4 @@
-﻿#define LimitRecordingsFound
+﻿//#define LimitRecordingsFound
 //#define TargetSingleRecording
 
 namespace TabloRecordingExtractor
