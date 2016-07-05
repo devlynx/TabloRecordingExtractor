@@ -47,6 +47,7 @@ namespace TabloRecordingExtractor
                     i++;
                     primaryProgressBar.Report(new ProgressBarInfo() { Maximum = null, Value = i });
                     await Task.Delay(5);
+                    log.Info("========================================================================");
                 }
             }
         }
@@ -67,7 +68,7 @@ namespace TabloRecordingExtractor
             catch (IOException ex)
             {
                 string text = string.Format("Unable to create temporary directory at '{0}\\TempTabloExtract'", Path.GetTempPath());
-                log.Debug(text, ex);
+                log.Error(text, ex);
                 MessageBox.Show(text);
                 return;
             }
@@ -82,7 +83,7 @@ namespace TabloRecordingExtractor
             catch (IOException ex)
             {
                 string text = string.Format("Unable to create output directory at '{0}'", OutputDirectory);
-                log.Debug(text, ex);
+                log.Error(text, ex);
                 MessageBox.Show(text);
                 return;
             }
@@ -128,6 +129,7 @@ namespace TabloRecordingExtractor
                 MessageBox.Show(notFound);
                 return;
             }
+
             try
             {
                 FileInfo fileInfo = new FileInfo(FFMPEGLocation);
@@ -148,17 +150,19 @@ namespace TabloRecordingExtractor
             }
 
             RecordingWatch recordingWatch = TabloAPI.GetRecordingWatch(recording, TabloEndPoint);
-
-            if (await ProcessVideosInFFMPEG(recordingWatch.playlist_url, recording, OutputFile, FFMPEGLocation, secondaryProgressBar, secondaryLabel))
+            if (String.IsNullOrWhiteSpace(recordingWatch.playlist_url))
             {
+                log.ErrorFormat("recordingWatch.playlist_url for {0} is empty.", recording);
+            }
+            else if (await ProcessVideosInFFMPEG(recordingWatch.playlist_url, recording, OutputFile, FFMPEGLocation, secondaryProgressBar, secondaryLabel))
+            {
+                log.InfoFormat("playlist_url: {0}", recordingWatch.playlist_url);
                 string recordingJson = JsonConvert.SerializeObject(recording, Formatting.Indented);
                 string recordingOutputFile = Path.ChangeExtension(OutputFile, ".json");
                 if (File.Exists(recordingOutputFile))
                     File.Delete(recordingOutputFile);
                 File.WriteAllText(recordingOutputFile, recordingJson);
                 if (!File.Exists(recordingOutputFile))
-                    log.ErrorFormat("Recording file: {0} was not written!", recordingOutputFile);
-                else
                     log.InfoFormat("Recording file: {0} written to disk.", recordingOutputFile);
             }
         }
@@ -168,14 +172,15 @@ namespace TabloRecordingExtractor
         {
             log.InfoFormat("ProcessVideosInFFMPEG: {0}", recording);
 
+            string ffmpegOutputFileName = String.Format("{0}\\TabloRecordingExtractor\\ffmpeg.txt",  Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData));
+
             using (Process process = new Process())
             {
                 process.StartInfo.FileName = FFMPEGLocation;
 
                 // -y -i http://10.50.4.103:80/stream/pl.m3u8?oR_Qzu7PBQCL0BZ-tyysuw -codec copy -strict -2 -c:a aac -threads 0 "C:\SD\Temp\Tablo\tmp\Foreground_rip.mp4"
                 process.StartInfo.Arguments = string.Format(
-                    "-y -i {0} -codec copy -strict -2 -c:a aac -threads 0 \"{1}\"", 
-                    playListURL, OutputFile);
+                    "-y -i {0} -codec copy -strict -2 -c:a aac -threads 0 \"{1}\" > \"{2}\" 2>&1", playListURL, OutputFile, ffmpegOutputFileName);
 
                 log.InfoFormat("FFMEPG command line: {0}", process.StartInfo.Arguments);
                 process.StartInfo.RedirectStandardError = false;
@@ -193,48 +198,19 @@ namespace TabloRecordingExtractor
                 }
 
                 secondaryLabel.Report(String.Format("Extracting: {0}", recording));
-
-                //string stdOut = process.StandardOutput.ReadToEnd();
-
-                //process.WaitForExit();
-
-                //process.BeginOutputReadLine();
-                //process.BeginErrorReadLine();
-                //MessageBox.Show("Waiting for the process to exit....");
                 log.Info("WaitForExit");
                 process.WaitForExit();
                 if (process.HasExited)
                 {
-                    log.Info("FFMPEG Has Exited");
-                    //process.CancelErrorRead();
-                    //process.CancelOutputRead();
-                    process.Close();
-                    //MessageBox.Show("Closed");
+                   log.Info(File.ReadAllText(ffmpegOutputFileName));
+
+                    log.InfoFormat("FFMPEG Has Exited with ExitCode: {0}", process.ExitCode);
+                   process.Close();
                 }
             }
-            //catch (Exception ex)
-            //{
-            //    MessageBox.Show("1.\n" + ex.Message);
-            //}
 
-            //if (process.ExitCode > 0)
-            //{
-            //    MessageBox.Show(String.Format("ffmpeg failure: {0}", process.ExitCode));
-
-            //    StreamReader reader = process.StandardError;
-            //    string line;
-            //    while ((line = reader.ReadLine()) != null)
-            //    {
-            //        //lbRecordingIDs.Items.Add(line);
-            //        //Console.WriteLine(line);
-            //    }
-            //}
-
-            //  process.Close();
-
-            //if (File.Exists(FfmpegStdOutFileName))
-            //    File.Delete(FfmpegStdOutFileName);
-            //File.WriteAllText(FfmpegStdOutFileName, stdOut);
+            if (File.Exists(ffmpegOutputFileName))
+                File.Delete(ffmpegOutputFileName);
 
             if (!File.Exists(OutputFile))
             {
@@ -244,10 +220,9 @@ namespace TabloRecordingExtractor
             else
             {
                 FileInfo fileInfo = new FileInfo(OutputFile);
-                log.InfoFormat("Video file: {0} written to disk (size: {0}).", OutputFile, fileInfo.Length);
+                log.InfoFormat("Video file: {0} written to disk (size: {1}).", OutputFile, fileInfo.Length);
                 return true;
             }
-            return false;
         }
     }
 }
